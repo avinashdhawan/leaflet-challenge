@@ -1,11 +1,14 @@
-// Store our API endpoint inside queryUrl
-var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson";
+// Get geoJSON data
+var earthquakeURL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+var plateBoundaryURL = "/leaflet-challenge/static/data/PB2002_plates.json"
 
-// Perform a GET request to the query URL
-d3.json(queryUrl, function(data) {
+// Extract earthquake data
+d3.json(earthquakeURL, function(data) {
   // Once we get a response, send the data.features object to the createFeatures function
   createFeatures(data.features);
+  
 });
+
 
 function createFeatures(earthquakeData) {
 
@@ -19,11 +22,53 @@ function createFeatures(earthquakeData) {
   // Create a GeoJSON layer containing the features array on the earthquakeData object
   // Run the onEachFeature function once for each piece of data in the array
   var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
+
+  
+      pointToLayer: function (feature, latlng) {
+        return L.circleMarker(latlng);
+      },
+      style: styledata
+
   });
+function styledata(feature){
+  return{
+  radius: feature.properties.mag * 2,
+  fillColor: chooseColor(feature.properties.mag),
+  fillOpacity: 1,
+  opacity: 1,
+  color: "#000000",
+  stroke: true,
+  weight: 0.5
+
+  };
+
+}
+
+function chooseColor(magnitude) {
+  var mag = magnitude;
+  if (mag >= 6.0) {
+  return "red";
+  }
+  else if (mag >= 5.0) {
+  return "orange";
+  }
+  else if (mag >= 4.0) {
+  return "yellow";
+  }
+  else if (mag >= 3.0) {
+    return "green";
+  }
+  else if (mag >= 2.0) {
+    return "blue";
+      }
+  else {
+  return "purple";
+  }
+  }
 
   // Sending our earthquakes layer to the createMap function
   createMap(earthquakes);
+  //create faultlines
 }
 
 function createMap(earthquakes) {
@@ -50,11 +95,16 @@ function createMap(earthquakes) {
     "Street Map": streetmap,
     "Dark Map": darkmap
   };
+  var techtonicPlates = new L.layerGroup();
 
   // Create overlay object to hold our overlay layer
   var overlayMaps = {
-    Earthquakes: earthquakes
+    Earthquakes: earthquakes,
+    TechtonicPlates: techtonicPlates
   };
+
+
+
 
   // Create our map, giving it the streetmap and earthquakes layers to display on load
   var myMap = L.map("map", {
@@ -71,4 +121,14 @@ function createMap(earthquakes) {
   L.control.layers(baseMaps, overlayMaps, {
     collapsed: false
   }).addTo(myMap);
+
+  d3.json(plateBoundaryURL, function (plateData){
+    L.geoJSON(plateData, {
+      color: "black",
+      weight : 1,
+    })
+    .addTo(techtonicPlates);
+    techtonicPlates.addTo(myMap);
+
+    })
 }
